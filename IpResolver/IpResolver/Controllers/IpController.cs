@@ -14,12 +14,10 @@ namespace IpResolver.Controllers
     public class IpController : Controller
     {
         private readonly DataBase dbContext;
-        private readonly OnlineUsers onlineUsers;
 
-        public IpController(DataBase dbContext, OnlineUsers onlineUsers)
+        public IpController(DataBase dbContext)
         {
             this.dbContext = dbContext;
-            this.onlineUsers = onlineUsers;
         }
 
         [HttpPost]
@@ -28,9 +26,8 @@ namespace IpResolver.Controllers
             Client client = new Client
             {
                 IpAddress = HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString(),
-                LifeTime = DateTime.UtcNow.AddSeconds(20)
+                LifeTime = DateTime.Now.AddSeconds(20)
             };
-            onlineUsers.Clients.Add(client);
 
             if (dbContext.Rooms.Count() == 0)
             {
@@ -60,9 +57,9 @@ namespace IpResolver.Controllers
         {
             var resRoom = dbContext.Rooms.Include(r => r.Users).FirstOrDefault(r => r.RoomName == "FirstRoom");
             var client = resRoom.Users.FirstOrDefault(c => c.IpAddress == HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString());
-            client.LifeTime = DateTime.UtcNow.AddSeconds(180);
+            client.LifeTime = DateTime.UtcNow.AddSeconds(20);
             await dbContext.SaveChangesAsync();
-            resRoom.Users.RemoveAll(c => c.LifeTime <= DateTime.UtcNow);
+            resRoom.Users.RemoveAll(c => c.LifeTime <= DateTime.Now);
             await dbContext.SaveChangesAsync();
             return Ok();
         }
