@@ -19,6 +19,10 @@ namespace IpResolver
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>();
+                .UseStartup<Startup>()
+                .UseUrls("http://*:5000")
+                .ConfigureAppConfiguration(app => app.AddJsonFile("appsettings.Secret.json", false));
+
+
     }
 }
