@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using IpResolver.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Timers;
 
 namespace IpResolver.Controllers
 {
@@ -13,11 +14,12 @@ namespace IpResolver.Controllers
     public class IpController : Controller
     {
         private readonly DataBase dbContext;
+        private readonly OnlineUsers onlineUsers;
 
-
-        public IpController(DataBase dbContext)
+        public IpController(DataBase dbContext, OnlineUsers onlineUsers)
         {
             this.dbContext = dbContext;
+            this.onlineUsers = onlineUsers;
         }
 
         [HttpPost]
@@ -25,8 +27,10 @@ namespace IpResolver.Controllers
         {
             Client client = new Client
             {
-                IpAddress = HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString()
+                IpAddress = HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString(),
+                LifeTime = DateTime.UtcNow.AddSeconds(20)
             };
+            onlineUsers.Clients.Add(client);
 
             if (dbContext.Rooms.Count() == 0)
             {
@@ -49,6 +53,18 @@ namespace IpResolver.Controllers
                 await dbContext.SaveChangesAsync();
                 return Json(FullInfo);
             }
+        }
+
+        [HttpGet("Alive")]
+        public async Task<IActionResult> Alive()
+        {
+            var resRoom = dbContext.Rooms.Include(r => r.Users).FirstOrDefault(r => r.RoomName == "FirstRoom");
+            var client = resRoom.Users.FirstOrDefault(c => c.IpAddress == HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString());
+            client.LifeTime = DateTime.UtcNow.AddSeconds(180);
+            await dbContext.SaveChangesAsync();
+            resRoom.Users.RemoveAll(c => c.LifeTime <= DateTime.UtcNow);
+            await dbContext.SaveChangesAsync();
+            return Ok();
         }
     }
 }
